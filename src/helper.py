@@ -174,7 +174,7 @@ class Helper:
     @classmethod
     def modify_order(cls, args):
         try:
-            args = make_order_modify_args(**args)
+            # args = make_order_modify_args(**args)
             resp = cls.api().order_modify(**args)
             return resp
         except Exception as e:
