@@ -7,6 +7,7 @@ import os
 
 class Jsondb:
     now = pdlm.now("Asia/Kolkata")
+    format_string = "HH:mm:ss DD-MM-YYYY"
 
     @classmethod
     def startup(cls, db_file):
@@ -63,10 +64,28 @@ class Jsondb:
                     if order["side"] == "B"
                     and order["order_id"] not in ids
                     and order["order_id"] not in completed_trades
-                    and pdlm.parse(order["broker_timestamp"]) > cls.now
+                    and (
+                        pdlm.from_format(
+                            order["broker_timestamp"],
+                            cls.format_string,
+                            tz="Asia/Kolkata",
+                        )
+                        > cls.now
+                    )
                 ]
         except Exception as e:
             logging.error(f"{e} while get one order")
             print_exc()
         finally:
             return new
+
+
+if __name__ == "__main__":
+    now = pdlm.now("Asia/Kolkata")
+
+    o_time = pdlm.from_format(
+        "09:31:00 06-10-2025", Jsondb.format_string, tz="Asia/Kolkata"
+    )
+    assert (
+        now > o_time
+    ), "time is wrong"  # Assert that the current time is greater than the time of the order

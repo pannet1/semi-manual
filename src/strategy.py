@@ -1,8 +1,8 @@
 """
-    Purchase price for each trade plus 5% should be auto exit separately
-    Options stike chart respective 9.16 one min candle low will be stop loss
-    Buy will be manual  and sell will be algo with both target and stoploss.
-    Multiple trades will be triggered and to be tracked separetely.
+Purchase price for each trade plus 5% should be auto exit separately
+Options stike chart respective 9.16 one min candle low will be stop loss
+Buy will be manual  and sell will be algo with both target and stoploss.
+Multiple trades will be triggered and to be tracked separetely.
 """
 
 from constants import logging, O_SETG

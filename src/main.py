@@ -50,7 +50,7 @@ def _init():
     logging.info("HAPPY TRADING")
     F_ORDERS = S_DATA + "orders.json"
     Jsondb.startup(F_ORDERS)
-    Helper.api
+    Helper.api()
 
 
 def run_strategies(strategies, trades_from_api):

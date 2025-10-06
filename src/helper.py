@@ -77,7 +77,6 @@ class Helper:
     completed_trades = []
 
     @classmethod
-    @property
     def api(cls):
         if cls._api is None:
             cls._api = login()
@@ -109,13 +108,13 @@ class Helper:
                 if resp:
                     symbol, low = resp
             if cls.subscribed.get(symbol, None) is None:
-                token = cls.api.instrument_symbol(exchange, symbol)
+                token = cls.api().instrument_symbol(exchange, symbol)
                 now = pdlm.now()
                 fm = now.replace(hour=9, minute=0, second=0, microsecond=0).timestamp()
                 to = now.replace(hour=9, minute=17, second=0, microsecond=0).timestamp()
                 key = exchange + "|" + str(token)
                 if not low:
-                    resp = cls.api.historical(exchange, token, fm, to)
+                    resp = cls.api().historical(exchange, token, fm, to)
                     low = resp[-2]["intl"]
                 cls.subscribed[symbol] = {
                     "symbol": symbol,
@@ -151,7 +150,7 @@ class Helper:
     @classmethod
     def ltp(cls, exchange, token):
         try:
-            resp = cls.api.scriptinfo(exchange, token)
+            resp = cls.api().scriptinfo(exchange, token)
             if resp is not None:
                 return float(resp["lp"])
             else:
@@ -164,8 +163,8 @@ class Helper:
     @classmethod
     def one_side(cls, bargs):
         try:
-            bargs = make_order_place_args(**bargs)
-            resp = cls.api.order_place(**bargs)
+            # bargs = make_order_place_args(**bargs)
+            resp = cls.api().order_place(**bargs)
             return resp
         except Exception as e:
             message = f"helper error {e} while placing order"
@@ -176,7 +175,7 @@ class Helper:
     def modify_order(cls, args):
         try:
             args = make_order_modify_args(**args)
-            resp = cls.api.order_modify(**args)
+            resp = cls.api().order_modify(**args)
             return resp
         except Exception as e:
             message = f"helper error {e} while modifying order"
@@ -186,7 +185,7 @@ class Helper:
     @classmethod
     def orders(cls):
         try:
-            orders = cls.api.orders
+            orders = cls.api().orders
             if any(orders):
                 # print(orders[0].keys())
                 return post_order_hook(*orders)
@@ -222,7 +221,7 @@ class Helper:
                 "source",
                 "broker_timestamp",
             ]
-            from_api = cls.api.trades
+            from_api = cls.api().trades
             if from_api:
                 # Apply filter to each order item
                 from_api = [filter_dictionary_by_keys(item, keys) for item in from_api]
@@ -274,7 +273,7 @@ class Helper:
         try:
             ttl = 0
             resp = [{}]
-            resp = cls.api.positions
+            resp = cls.api().positions
             """
             keys = [
                 "symbol",
@@ -314,10 +313,10 @@ if __name__ == "__main__":
             pd.DataFrame(resp).to_csv(S_DATA + "orders.csv", index=False)
 
     def history(exchange, symbol):
-        token = Helper.api.instrument_symbol(exchange, symbol)
+        token = Helper.api().instrument_symbol(exchange, symbol)
         fm = pdlm.now().replace(hour=9, minute=0, second=0, microsecond=0).timestamp()
         to = pdlm.now().replace(hour=9, minute=17, second=0, microsecond=0).timestamp()
-        resp = Helper.api.historical(exchange, token, fm, to)
+        resp = Helper.api().historical(exchange, token, fm, to)
         pprint(resp)
         print(resp[-2]["intl"])
 
@@ -334,7 +333,7 @@ if __name__ == "__main__":
         print(resp)
 
     def margin():
-        resp = Helper.api.margins
+        resp = Helper.api().margins
         print(resp)
 
     orders()
