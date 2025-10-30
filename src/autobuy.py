@@ -51,7 +51,7 @@ class AutoBuy:
                 if (
                     self.buy_symbols[symbol]["is_enabled"]
                     and ltp
-                    and float(ltp) < self.buy_symbols[symbol]["low"]
+                    and float(ltp) > self.buy_symbols[symbol]["low"]
                     and self.buy_symbols[symbol]["status"] == BuyType.LOW
                 ):
                     self.buy_symbols[symbol]["status"] = BuyType.START
