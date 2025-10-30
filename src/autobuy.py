@@ -31,7 +31,7 @@ class AutoBuy:
 
         """
         if not self.buy_symbols.get(symbol, None):
-            qty_low_ltp["status"] = BuyType.LOW
+            qty_low_ltp["status"] = BuyType.START
             qty_low_ltp["is_enabled"] = True
             self._new(symbol, qty_low_ltp)
 
