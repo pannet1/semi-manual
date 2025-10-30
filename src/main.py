@@ -5,6 +5,7 @@ from toolkit.kokoo import is_time_past, timer
 from traceback import print_exc
 from pprint import pprint
 from jsondb import Jsondb
+from autobuy import AutoBuy
 
 
 def strategies_from_file():
@@ -55,6 +56,7 @@ def _init():
 
 def run_strategies(strategies, trades_from_api):
     try:
+        #
         write_job = []
         for strgy in strategies:
             ltps = Helper.get_quotes()
@@ -67,6 +69,7 @@ def run_strategies(strategies, trades_from_api):
             if completed_buy_order_id:
                 logging.debug(f"COMPLETED buy {completed_buy_order_id}")
                 Helper.completed_trades.append(completed_buy_order_id)
+
             else:
                 write_job.append(obj_dict)
 
@@ -80,6 +83,7 @@ def run_strategies(strategies, trades_from_api):
 def main():
     try:
         _init()
+        auto_buy = AutoBuy()
         while not is_time_past(O_SETG["trade"]["stop"]):
             strategies = strategies_from_file()
 
@@ -90,9 +94,22 @@ def main():
             strgy = create_strategy(list_of_trades)
             if strgy:
                 strategies.append(strgy)
+                # copy params from manual buy to autobuy
+                symbol = strgy._buy_order["symbol"]
+                logging.debug(f"BUY {symbol}")
+                qty_low_ltp = {
+                    "low": strgy._low,
+                    "quantity": strgy._buy_order["quantity"],
+                    "product": strgy._buy_order["product"],
+                    "exchange": strgy._buy_order["exchange"],
+                }
+                logging.debug(f"param qty_low_ltp:{qty_low_ltp}")
+                auto_buy.init(symbol, qty_low_ltp)
 
             write_job = run_strategies(strategies, trades_from_api)
             Jsondb.write(write_job)
+
+            auto_buy.is_breakout(Helper.get_quotes())
     except KeyboardInterrupt:
         __import__("sys").exit()
     except Exception as e:
