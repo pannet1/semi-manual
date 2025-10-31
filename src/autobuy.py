@@ -11,6 +11,11 @@ class BuyType(IntEnum):
 
 
 class AutoBuy:
+    """
+    Auto Buy
+    - stores a buy symbol as key
+    """
+
     buy_symbols = {}
 
     def _new(self, symbol, qty_low_ltp: dict):
@@ -45,7 +50,6 @@ class AutoBuy:
 
     def is_breakout(self, ltps):
         try:
-
             for symbol in self.buy_symbols.keys():
                 ltp = ltps.get(symbol, None)
                 if (
@@ -74,9 +78,11 @@ class AutoBuy:
                     else:
                         self.buy_symbols[symbol]["is_enabled"] = False
                         logging.info(f"AUTOBUY {symbol} order {order_id} is placed")
-                        return True
 
-                self._update_low(symbol, float(ltp))
+                if ltp is not None:
+                    self._update_low(symbol, float(ltp))
+                else:
+                    logging.error(f"Invalid ltp for {symbol}")
         except Exception as e:
             print_exc()
             print(f"{e} while is_breakout")
