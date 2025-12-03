@@ -22,6 +22,7 @@ class Strategy:
             self._low = float(symbol_info["low"])
             self._ltp = float(symbol_info["ltp"])
             self._stop = float(symbol_info["low"])
+            self._high = float(symbol_info["ltp"])
             self._condition = symbol_info["condition"]
             exchange = self._buy_order["exchange"]
             self._target = O_SETG["targets"][exchange]
@@ -40,8 +41,10 @@ class Strategy:
                     self._target = min(target_virtual, self._low)
             self._target = round(self._target / 0.05) * 0.05
 
+            """
             if eval(self._condition):
                 self._stop = 0.00
+            """
 
         except Exception as e:
             print_exc()
@@ -94,12 +97,9 @@ class Strategy:
 
     def exit_order(self):
         try:
-            if self._stop == 0:
-                logging.debug(f"REMOVING {self._id} order because {self._stop}")
+            if self._is_target_reached():
                 return self._id
-            elif self._is_target_reached():
-                return self._id
-            elif eval(self._condition):
+            elif self._high > self._low and eval(self._condition):
                 logging.debug(f"REMOVING {self._id} because {self._condition} met")
                 if self._buy_order["exchange"] == "MCX":
                     exit_buffer = 50 * self._fill_price / 100
@@ -136,6 +136,7 @@ class Strategy:
             ltp = ltps.get(self._symbol, None)
             if ltp is not None:
                 self._ltp = float(ltp)
+                self._high = max(self._high, self._ltp)
             result = getattr(self, self._fn)()
             return result
         except Exception as e:

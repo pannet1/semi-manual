@@ -37,11 +37,14 @@ class AutoBuy:
         """
         if not self.buy_symbols.get(symbol, None):
             qty_low_ltp["status"] = BuyType.START
+
+            # TODO remove this and add time manager
             qty_low_ltp["is_enabled"] = True
+
             self._new(symbol, qty_low_ltp)
 
         quantity = qty_low_ltp["quantity"]
-        if self.buy_symbols[symbol]["quantity"] < quantity:
+        if self.buy_symbols[symbol]["quantity"] > quantity:
             self._lesser_quantity(symbol, quantity)
 
     def _update_low(self, symbol, ltp):
