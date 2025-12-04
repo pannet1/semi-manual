@@ -22,7 +22,7 @@ class Strategy:
             self._low = float(symbol_info["low"])
             self._ltp = float(symbol_info["ltp"])
             self._stop = float(symbol_info["low"])
-            self._high = float(symbol_info["ltp"])
+            self._high = max(self._fill_price, self._ltp)
             self._condition = symbol_info["condition"]
             exchange = self._buy_order["exchange"]
             self._target = O_SETG["targets"][exchange]
