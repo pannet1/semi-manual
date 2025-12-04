@@ -1,5 +1,5 @@
 from constants import logging, O_SETG, S_DATA
-from helper import Helper, find_mcx_exit_condition
+from helper import Helper
 from strategy import Strategy
 from toolkit.kokoo import is_time_past, timer
 from traceback import print_exc
@@ -90,7 +90,7 @@ def run_strategies(strategies, trades_from_api):
 def main():
     try:
         _init()
-        auto_buy = AutoBuy()
+        auto_buy = AutoBuy(O_SETG["sleep_for"])
         while not is_time_past(O_SETG["trade"]["stop"]):
             strategies = strategies_from_file()
 

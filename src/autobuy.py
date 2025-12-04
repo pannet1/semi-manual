@@ -2,6 +2,7 @@ from enum import IntEnum
 from traceback import print_exc
 from constants import logging
 from helper import Helper
+import pendulum as pdlm
 
 
 class BuyType(IntEnum):
@@ -17,6 +18,9 @@ class AutoBuy:
     """
 
     buy_symbols = {}
+
+    def __init__(self, pdlm_args: dict):
+        self.pdlm_args = pdlm_args
 
     def _new(self, symbol, qty_low_ltp: dict):
         self.buy_symbols[symbol] = qty_low_ltp
@@ -37,10 +41,7 @@ class AutoBuy:
         """
         if not self.buy_symbols.get(symbol, None):
             qty_low_ltp["status"] = BuyType.START
-
-            # TODO remove this and add time manager
-            qty_low_ltp["is_enabled"] = True
-
+            qty_low_ltp["next_trade"] = pdlm.now()
             self._new(symbol, qty_low_ltp)
 
         quantity = qty_low_ltp["quantity"]
@@ -56,13 +57,11 @@ class AutoBuy:
             for symbol in self.buy_symbols.keys():
                 ltp = ltps.get(symbol, None)
                 if (
-                    self.buy_symbols[symbol]["is_enabled"]
-                    and ltp
+                    ltp
                     and float(ltp) > self.buy_symbols[symbol]["low"]
                     and self.buy_symbols[symbol]["status"] == BuyType.LOW
+                    and pdlm.now() > self.buy_symbols[symbol]["next_trade"]
                 ):
-                    self.buy_symbols[symbol]["status"] = BuyType.START
-                    # TODO Place Buy order
                     bargs = dict(
                         symbol=symbol,
                         quantity=self.buy_symbols[symbol]["quantity"],
@@ -76,10 +75,14 @@ class AutoBuy:
                     )
                     logging.debug(bargs)
                     order_id = Helper.one_side(bargs)
+                    self.buy_symbols[symbol]["status"] = BuyType.START
+                    self.buy_symbols[symbol]["next_trade"] = pdlm.now().add(
+                        **self.pdlm_args
+                    )
                     if not order_id or not isinstance(order_id, str):
                         logging.error(f"Invalid buy order response: {order_id}")
                     else:
-                        self.buy_symbols[symbol]["is_enabled"] = False
+                        # update TRADE TIME
                         logging.info(f"AUTOBUY {symbol} order {order_id} is placed")
 
                 if ltp is not None:
