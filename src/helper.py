@@ -235,6 +235,7 @@ class Helper:
             if from_api:
                 # Apply filter to each order item
                 from_api = [filter_dictionary_by_keys(item, keys) for item in from_api]
+                print("helper from_api: ", from_api)
 
         except Exception as e:
             send_messages(f"Error fetching trades: {e}")

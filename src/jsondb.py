@@ -64,6 +64,7 @@ class Jsondb:
                     if order["side"] == "B"
                     and order["order_id"] not in ids
                     and order["order_id"] not in completed_trades
+                    and order.get("tag", None)
                     and (
                         pdlm.from_format(
                             order["broker_timestamp"],
@@ -73,6 +74,7 @@ class Jsondb:
                         > cls.now
                     )
                 ]
+                print("JSONDB, FILTERED TRADES", new)
         except Exception as e:
             logging.error(f"{e} while get one order")
             print_exc()

@@ -6,3 +6,5 @@ trade:
 targets:
   NFO: 2
   MCX: 2
+sleep_for: 1
+
