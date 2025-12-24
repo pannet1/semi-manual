@@ -1,3 +1,4 @@
+from datetime import time
 import pendulum as pdlm
 from constants import O_FUTL, logging
 from traceback import print_exc
@@ -64,7 +65,7 @@ class Jsondb:
                     if order["side"] == "B"
                     and order["order_id"] not in ids
                     and order["order_id"] not in completed_trades
-                    and order.get("tag", None)
+                    and order.get("tag", None) is None
                     and (
                         pdlm.from_format(
                             order["broker_timestamp"],
@@ -74,7 +75,9 @@ class Jsondb:
                         > cls.now
                     )
                 ]
-                print("JSONDB, FILTERED TRADES", new)
+                for item in new:
+                    logging.debug("\n", item["buy_order"], "\n")
+
         except Exception as e:
             logging.error(f"{e} while get one order")
             print_exc()
