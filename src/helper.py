@@ -260,7 +260,6 @@ class Helper:
                     side="B",
                     order_type="MKT",
                     exchange="NFO",
-                    tag="close",
                 )
                 resp = cls.api.order_place(**args)
                 send_messages(f"api responded with {resp}")
@@ -273,7 +272,7 @@ class Helper:
                     side="S",
                     order_type="MKT",
                     exchange="NFO",
-                    tag="close",
+                    tag="autobuy",
                 )
                 resp = cls.api.order_place(**args)
                 send_messages(f"api responded with {resp}")
