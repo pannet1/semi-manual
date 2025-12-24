@@ -71,7 +71,6 @@ class AutoBuy:
                         trigger_price=0,
                         order_type="LIMIT",
                         exchange=self.buy_symbols[symbol]["exchange"],
-                        tag="autobuy",
                     )
                     logging.debug(bargs)
                     order_id = Helper.one_side(bargs)
