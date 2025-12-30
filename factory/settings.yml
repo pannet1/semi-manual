@@ -6,5 +6,9 @@ trade:
 targets:
   NFO: 2
   MCX: 2
+  NSE: 2
+stops:
+  NFO: 50
+  MCX: 50
+  BFO: 50
 sleep_for: 1
-

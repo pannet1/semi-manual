@@ -104,11 +104,17 @@ def main():
                 # copy params from manual buy to autobuy
                 symbol = strgy._buy_order["symbol"]
                 logging.debug(f"BUY {symbol}")
+                exchange = strgy._buy_order["exchange"]
+                # added code
+                stops = O_SETG.get("stops", None)
+                if stops:
+                    strgy._low = stops.get(exchange, strgy._low)
+                    logging.debug(f"main {symbol=} is set with low {strgy._low}")
                 qty_low_ltp = {
                     "low": strgy._low,
                     "quantity": strgy._buy_order["quantity"],
                     "product": strgy._buy_order["product"],
-                    "exchange": strgy._buy_order["exchange"],
+                    "exchange": exchange,
                 }
                 logging.debug(f"param qty_low_ltp:{qty_low_ltp}")
                 auto_buy.init(symbol, qty_low_ltp)
