@@ -1,10 +1,3 @@
-"""
-Purchase price for each trade plus 5% should be auto exit separately
-Options stike chart respective 9.16 one min candle low will be stop loss
-Buy will be manual  and sell will be algo with both target and stoploss.
-Multiple trades will be triggered and to be tracked separetely.
-"""
-
 from traceback import print_exc
 
 from constants import O_SETG, logging
@@ -19,13 +12,13 @@ class Strategy:
             self._id = id
             self._buy_order = buy_order
             self._symbol = symbol_info["symbol"]
+            self._option_type = "CE" if "CE" in self._symbol else "PE"
             self._fill_price = float(buy_order["fill_price"])
+            self._exchange = self._buy_order["exchange"]
             self._low = float(symbol_info["low"])
             self._ltp = float(symbol_info["ltp"])
             self._stop = float(symbol_info["low"])
             self._condition = symbol_info["condition"]
-            exchange = self._buy_order["exchange"]
-            self._target = O_SETG["targets"][exchange]
             self._sell_order = ""
             self._orders = []
             if self._fill_price < self._low:
@@ -33,14 +26,44 @@ class Strategy:
             else:
                 self._set_target_and_stop()
 
+    def _set_target_and_stop(self):
+        try:
+            # Default target
+            target_str = "2%"
+
+            # Deep lookup using walrus operator
+            if (targets := O_SETG.get("targets")) and isinstance(targets, dict):
+                if (ex_targets := targets.get(self._exchange)) and (
+                    val := ex_targets.get(self._option_type)
+                ):
+                    target_str = str(val).strip()
+
+            # Calculation logic
+            if target_str.endswith("%"):
+                pct_value = float(target_str.replace("%", ""))
+                target_buffer = (pct_value * self._fill_price) / 100
+            else:
+                target_buffer = float(target_str)
+
+            # Final definitive float cleaning
+            self._target = float(f"{(self._fill_price + target_buffer):.2f}")
+
+            logging.info(f"Target set at: {self._target}")
+            self._fn = "try_to_exit"
+
+        except Exception as e:
+            logging.error(f"Error in target setting: {e}")
+            print_exc()
+
     def _exit_trade(self):
         try:
+            limit_price = self._get_aggressive_sell_price()
             sargs = dict(
                 symbol=self._buy_order["symbol"],
                 quantity=abs(int(self._buy_order["quantity"])),
                 product=self._buy_order["product"],
                 side="S",
-                price=self._target,
+                price=limit_price,
                 trigger_price=0,
                 order_type="LIMIT",
                 exchange=self._buy_order["exchange"],
@@ -59,19 +82,14 @@ class Strategy:
             print_exc()
 
     def _modify_order(self):
-        if self._buy_order["exchange"] == "MCX":
-            exit_buffer = 50 * self._fill_price / 100
-            exit_virtual = self._fill_price - exit_buffer
-        else:
-            exit_buffer = 2 * self._ltp / 100
-            exit_virtual = self._ltp - exit_buffer
+        limit_price = self._get_aggressive_sell_price()
         args = dict(
             symbol=self._buy_order["symbol"],
             order_id=self._sell_order,
             exchange=self._buy_order["exchange"],
             quantity=abs(int(self._buy_order["quantity"])),
             order_type="LIMIT",
-            price=round(exit_virtual / 0.05) * 0.05,
+            price=limit_price,
             trigger_price=0.00,
         )
         logging.debug(f"modify order {args}")
@@ -87,16 +105,6 @@ class Strategy:
         except Exception as e:
             logging.error(f"{e} get order from book")
             print_exc()
-
-    def _set_target_and_stop(self):
-        try:
-            target_buffer = self._target * self._fill_price / 100
-            target_virtual = self._fill_price + target_buffer
-            self._target = round(target_virtual / 0.05) * 0.05
-            self._fn = "try_to_exit"
-        except Exception as e:
-            print_exc()
-            print(f"{e} while set target")
 
     def try_to_exit(self):
         try:
@@ -117,3 +125,28 @@ class Strategy:
         except Exception as e:
             logging.error(f"{e} in run for buy order {self._id}")
             print_exc()
+
+    def _get_aggressive_sell_price(self):
+        """
+        Calculates a Sell Limit price to act as a Market Order.
+        Ensures the price is at least one tick below LTP to guarantee execution.
+        """
+        # 1. Determine Tick Size based on Exchange
+        # MCX often uses 1.0 or 0.05; NSE uses 0.05
+        tick = 1.0 if self._buy_order["exchange"] == "MCX" else 0.05
+
+        # 2. Calculate initial aggressive price (e.g., 0.1% below LTP)
+        raw_price = self._ltp * 0.999
+
+        # 3. Align to Tick
+        tick_aligned = round(raw_price / tick) * tick
+
+        # 4. FORCE STEP-DOWN: If rounding brought us back to LTP,
+        # manually subtract one tick to ensure we are 'worse' than LTP.
+        if tick_aligned >= self._ltp:
+            tick_aligned -= tick
+
+        # 5. Clean the float precision for the API
+        # Using 'g' or 'f' formatting depending on tick size
+        # to handle whole numbers (MCX) or decimals (NSE)
+        return float(f"{tick_aligned:.2f}")
