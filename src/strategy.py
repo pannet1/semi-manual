@@ -5,9 +5,10 @@ Buy will be manual  and sell will be algo with both target and stoploss.
 Multiple trades will be triggered and to be tracked separetely.
 """
 
-from constants import logging, O_SETG
-from helper import Helper
 from traceback import print_exc
+
+from constants import O_SETG, logging
+from helper import Helper
 
 
 class Strategy:
@@ -22,52 +23,18 @@ class Strategy:
             self._low = float(symbol_info["low"])
             self._ltp = float(symbol_info["ltp"])
             self._stop = float(symbol_info["low"])
-            self._high = max(self._fill_price, self._ltp)
             self._condition = symbol_info["condition"]
             exchange = self._buy_order["exchange"]
             self._target = O_SETG["targets"][exchange]
             self._sell_order = ""
             self._orders = []
-            self._set_target_and_stop()
-            self._fn = "place_sell_order"
+            if self._fill_price < self._low:
+                self._exit_trade()
+            else:
+                self._set_target_and_stop()
 
-    def _set_target_and_stop(self):
+    def _exit_trade(self):
         try:
-            target_buffer = self._target * self._fill_price / 100
-            target_virtual = self._fill_price + target_buffer
-            self._target = target_virtual
-            if self._buy_order["exchange"] != "MCX":
-                if self._fill_price < self._low:
-                    self._target = min(target_virtual, self._low)
-            self._target = round(self._target / 0.05) * 0.05
-
-            """
-            if eval(self._condition):
-                self._stop = 0.00
-            """
-
-        except Exception as e:
-            print_exc()
-            print(f"{e} while set target")
-
-    def _is_target_reached(self):
-        try:
-            flag = False
-            for order in self._orders:
-                if self._sell_order == order["order_id"]:
-                    logging.debug(
-                        f"{self._buy_order['symbol']} target order {self._sell_order} is reached"
-                    )
-                    flag = True
-        except Exception as e:
-            logging.error(f"{e} get order from book")
-            print_exc()
-        finally:
-            return flag
-
-    def place_sell_order(self):
-        try:
-            self._fn = "exit_order"
             sargs = dict(
                 symbol=self._buy_order["symbol"],
                 quantity=abs(int(self._buy_order["quantity"])),
@@ -81,50 +48,60 @@ class Strategy:
             )
             logging.debug(sargs)
             self._sell_order = Helper.one_side(sargs)
-
             # Validate sell order response
             if not self._sell_order or not isinstance(self._sell_order, str):
                 logging.error(f"Invalid sell order response: {self._sell_order}")
                 __import__("sys").exit(1)
-            else:
-                logging.info(
-                    f"TARGET order for {self._buy_order} is {self._sell_order}"
-                )
+            self._fn = "remove_me"
 
         except Exception as e:
             logging.error(f"{e} while place sell order")
             print_exc()
 
-    def exit_order(self):
-        try:
-            if self._is_target_reached():
-                return self._id
-            elif self._high > self._low and eval(self._condition):
-                logging.debug(f"REMOVING {self._id} because {self._condition} met")
-                if self._buy_order["exchange"] == "MCX":
-                    exit_buffer = 50 * self._fill_price / 100
-                    exit_virtual = self._fill_price - exit_buffer
-                else:
-                    exit_buffer = 2 * self._ltp / 100
-                    exit_virtual = self._ltp - exit_buffer
-                args = dict(
-                    symbol=self._buy_order["symbol"],
-                    order_id=self._sell_order,
-                    exchange=self._buy_order["exchange"],
-                    quantity=abs(int(self._buy_order["quantity"])),
-                    order_type="LIMIT",
-                    price=round(exit_virtual / 0.05) * 0.05,
-                    trigger_price=0.00,
-                )
-                logging.debug(f"modify order {args}")
-                resp = Helper.modify_order(args)
-                logging.debug(f"order id: {args['order_id']} modify {resp=}")
-                #
-                # TODO
+    def _modify_order(self):
+        if self._buy_order["exchange"] == "MCX":
+            exit_buffer = 50 * self._fill_price / 100
+            exit_virtual = self._fill_price - exit_buffer
+        else:
+            exit_buffer = 2 * self._ltp / 100
+            exit_virtual = self._ltp - exit_buffer
+        args = dict(
+            symbol=self._buy_order["symbol"],
+            order_id=self._sell_order,
+            exchange=self._buy_order["exchange"],
+            quantity=abs(int(self._buy_order["quantity"])),
+            order_type="LIMIT",
+            price=round(exit_virtual / 0.05) * 0.05,
+            trigger_price=0.00,
+        )
+        logging.debug(f"modify order {args}")
+        resp = Helper.modify_order(args)
+        logging.debug(f"order id: {args['order_id']} modify {resp=}")
 
-                return self._id
-            else:
-                return None
+    def remove_me(self):
+        try:
+            for order in self._orders:
+                if self._sell_order == order["order_id"]:
+                    return self._id
+            self._modify_order()
+        except Exception as e:
+            logging.error(f"{e} get order from book")
+            print_exc()
+
+    def _set_target_and_stop(self):
+        try:
+            target_buffer = self._target * self._fill_price / 100
+            target_virtual = self._fill_price + target_buffer
+            self._target = round(target_virtual / 0.05) * 0.05
+            self._fn = "try_to_exit"
+        except Exception as e:
+            print_exc()
+            print(f"{e} while set target")
+
+    def try_to_exit(self):
+        try:
+            if eval(self._condition) or self._ltp > self._target:
+                self._exit_trade()
 
         except Exception as e:
             logging.error(f"{e} while exit order")
@@ -136,9 +113,7 @@ class Strategy:
             ltp = ltps.get(self._symbol, None)
             if ltp is not None:
                 self._ltp = float(ltp)
-                self._high = max(self._high, self._ltp)
-            result = getattr(self, self._fn)()
-            return result
+            return getattr(self, self._fn)()
         except Exception as e:
             logging.error(f"{e} in run for buy order {self._id}")
             print_exc()

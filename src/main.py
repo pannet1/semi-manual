@@ -1,11 +1,13 @@
-from constants import logging, O_SETG, S_DATA
-from helper import Helper
-from strategy import Strategy
-from toolkit.kokoo import is_time_past, timer
-from traceback import print_exc
 from pprint import pprint
-from jsondb import Jsondb
+from traceback import print_exc
+
+from toolkit.kokoo import is_time_past, timer
+
 from autobuy import AutoBuy
+from constants import O_SETG, S_DATA, logging
+from helper import Helper
+from jsondb import Jsondb
+from strategy import Strategy
 
 
 def strategies_from_file():
@@ -72,7 +74,7 @@ def run_strategies(strategies, trades_from_api):
             obj_dict = strgy.__dict__
             obj_dict.pop("_orders")
             pprint(obj_dict)
-            timer(1)
+            timer(0.5)
             if completed_buy_order_id:
                 logging.debug(f"COMPLETED buy {completed_buy_order_id}")
                 Helper.completed_trades.append(completed_buy_order_id)
@@ -90,7 +92,7 @@ def run_strategies(strategies, trades_from_api):
 def main():
     try:
         _init()
-        auto_buy = AutoBuy(O_SETG["sleep_for"])
+        # auto_buy = AutoBuy(O_SETG["sleep_for"])
         while not is_time_past(O_SETG["trade"]["stop"]):
             strategies = strategies_from_file()
 
@@ -117,12 +119,12 @@ def main():
                     "exchange": exchange,
                 }
                 logging.debug(f"param qty_low_ltp:{qty_low_ltp}")
-                auto_buy.init(symbol, qty_low_ltp)
+                # auto_buy.init(symbol, qty_low_ltp)
 
             write_job = run_strategies(strategies, trades_from_api)
             Jsondb.write(write_job)
 
-            auto_buy.is_breakout(Helper.get_quotes())
+            # auto_buy.is_breakout(Helper.get_quotes())
     except KeyboardInterrupt:
         __import__("sys").exit()
     except Exception as e:
