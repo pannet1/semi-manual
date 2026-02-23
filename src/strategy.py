@@ -18,7 +18,6 @@ class Strategy:
             self._prefix, self._option_type = find_colval_from_exch_symbol(
                 option_exchange=self._exchange,
                 ts=symbol_info["symbol"],
-                colname="OptionType",
             )
             if isinstance(self._option_type, str):
                 self._option_type += "E"
