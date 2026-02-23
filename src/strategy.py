@@ -15,7 +15,7 @@ class Strategy:
             self._symbol = symbol_info["symbol"]
             self._fill_price = float(buy_order["fill_price"])
             self._exchange = self._buy_order["exchange"]
-            self._option_type = find_colval_from_exch_symbol(
+            self._prefix, self._option_type = find_colval_from_exch_symbol(
                 option_exchange=self._exchange,
                 ts=symbol_info["symbol"],
                 colname="OptionType",
@@ -64,8 +64,8 @@ class Strategy:
             logging.info(f"Target set at: {self._target}")
 
             # self.stops = {"CE": 12, .. }
-            if val := self.stops.get(self._option_type):
-                self._stop = val
+            if val := self.stops.get(self._prefix):
+                self._stop = val[self._option_type]
             else:
                 self._stop = self._low
 

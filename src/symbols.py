@@ -5,7 +5,7 @@ import pandas as pd
 from toolkit.fileutils import Fileutils
 
 
-def find_colval_from_exch_symbol(option_exchange, ts, colname):
+def find_colval_from_exch_symbol(option_exchange, ts):
     """
     possible colnames are Symbol and OptionType
     """
@@ -15,7 +15,7 @@ def find_colval_from_exch_symbol(option_exchange, ts, colname):
         "index"
     )
     data = symbol_master.get(ts)
-    return data[colname] if data else None
+    return (data[Symbol], data[OptionType]) if data else (None, None)
 
 
 dct_sym = {
