@@ -36,7 +36,6 @@ class Jsondb:
         finally:
             # Remove the marker file after the write is completed
             os.remove(temp_file)
-            logging.debug("write completed")
 
     @classmethod
     def read(cls):
