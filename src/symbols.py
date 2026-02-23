@@ -15,7 +15,7 @@ def find_colval_from_exch_symbol(option_exchange, ts):
         "index"
     )
     data = symbol_master.get(ts)
-    return (data[Symbol], data[OptionType]) if data else (None, None)
+    return (data["Symbol"], data["OptionType"]) if data else (None, None)
 
 
 dct_sym = {
@@ -215,7 +215,7 @@ if __name__ == "__main__":
     symbols = Symbols("NFO")
     symbols.get_exchange_token_map_finvasia()
     result = find_colval_from_exch_symbol(
-        option_exchange="NFO", ts="NIFTY24FEB26C25600", colname="OptionType"
+        option_exchange="NFO", ts="NIFTY24FEB26C25600"
     )
     print(result)
 
