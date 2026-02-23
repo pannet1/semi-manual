@@ -15,16 +15,21 @@ class Strategy:
             self._option_type = "CE" if "CE" in self._symbol else "PE"
             self._fill_price = float(buy_order["fill_price"])
             self._exchange = self._buy_order["exchange"]
+            # todo low to be removed
             self._low = float(symbol_info["low"])
             self._ltp = float(symbol_info["ltp"])
-            self._stop = float(symbol_info["low"])
-            self._condition = symbol_info["condition"]
+            # remove condition from mai
+            #self._condition = symbol_info["condition"]
+            self.stops = symbol_info["stops"]
             self._sell_order = ""
             self._orders = []
-            if self._fill_price < self._low:
-                self._exit_trade()
-            else:
-                self._set_target_and_stop()
+            self._conditions =  [
+                "self._fill_price < self._stop",
+                "self._ltp > self._target",
+                "self._ltp < self._stop",
+            ]
+            # stop set from outside
+            self._set_target_and_stop()
 
     def _set_target_and_stop(self):
         try:
@@ -49,10 +54,19 @@ class Strategy:
             self._target = float(f"{(self._fill_price + target_buffer):.2f}")
 
             logging.info(f"Target set at: {self._target}")
+
+            # self.stops = {"CE": 12, .. }
+            if val:= self.stops.get(self._option_type):
+                self._stop = val
+            else:
+                self._stop = self._low
+
+            logging.info(f"Stop set at: {self._stop}")
+
             self._fn = "try_to_exit"
 
         except Exception as e:
-            logging.error(f"Error in target setting: {e}")
+            logging.error(f"Error in target or stop setting: {e}")
             print_exc()
 
     def _exit_trade(self):
@@ -108,9 +122,12 @@ class Strategy:
 
     def try_to_exit(self):
         try:
-            if eval(self._condition) or self._ltp > self._target:
-                self._exit_trade()
-
+            for condition in self._conditions:
+                result = eval(condition)
+                if result:
+                    self._exit_trade()
+                    logging.info(f"exiting because of {condition} s:{self._stop} f:{self._fill_price} t:{self._target}")
+                    return
         except Exception as e:
             logging.error(f"{e} while exit order")
             print_exc()

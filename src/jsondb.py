@@ -46,7 +46,6 @@ class Jsondb:
         while os.path.exists(temp_file):
             timer(0.1)  # Wait for a short interval before checking again
         else:
-            logging.debug("reading file")
             return O_FUTL.json_fm_file(cls.F_ORDERS)
 
     @classmethod
@@ -76,7 +75,7 @@ class Jsondb:
                     )
                 ]
                 for item in new:
-                    logging.debug("\n", item["buy_order"], "\n")
+                    logging.debug(f'new: {item["buy_order"]}')
 
         except Exception as e:
             logging.error(f"{e} while get one order")

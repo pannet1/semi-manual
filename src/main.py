@@ -42,6 +42,9 @@ def create_strategy(list_of_orders):
                         condition = find_mcx_exit_condition(b["symbol"])
                     """
                     info["condition"] = condition
+                    stops = O_SETG.get("stops", None)
+                    if stops:
+                        info["stops"] = stops.get(b["exchange"], {})
                     strgy = Strategy(
                         {}, order_item["id"], order_item["buy_order"], info
                     )
@@ -73,12 +76,13 @@ def run_strategies(strategies, trades_from_api):
             completed_buy_order_id = strgy.run(trades_from_api, ltps)
             obj_dict = strgy.__dict__
             obj_dict.pop("_orders")
-            pprint(obj_dict)
+            for k, v in obj_dict.items():
+                if not isinstance(v, dict):
+                    print(k, v)
             timer(0.5)
             if completed_buy_order_id:
                 logging.debug(f"COMPLETED buy {completed_buy_order_id}")
                 Helper.completed_trades.append(completed_buy_order_id)
-
             else:
                 write_job.append(obj_dict)
 
@@ -98,7 +102,6 @@ def main():
 
             trades_from_api = Helper.trades()
             completed_trades = Helper.completed_trades
-            logging.debug(f"{completed_trades=}")
             list_of_trades = Jsondb.filter_trades(trades_from_api, completed_trades)
             strgy = create_strategy(list_of_trades)
             if strgy:
@@ -107,19 +110,16 @@ def main():
                 symbol = strgy._buy_order["symbol"]
                 logging.debug(f"BUY {symbol}")
                 exchange = strgy._buy_order["exchange"]
-                # added code
-                stops = O_SETG.get("stops", None)
-                if stops:
-                    strgy._low = stops.get(exchange, strgy._low)
-                    logging.debug(f"main {symbol=} is set with low {strgy._low}")
+                """
                 qty_low_ltp = {
-                    "low": strgy._low,
+                    "low": strgy._stop,
                     "quantity": strgy._buy_order["quantity"],
                     "product": strgy._buy_order["product"],
                     "exchange": exchange,
                 }
                 logging.debug(f"param qty_low_ltp:{qty_low_ltp}")
-                # auto_buy.init(symbol, qty_low_ltp)
+                auto_buy.init(symbol, qty_low_ltp)
+                """
 
             write_job = run_strategies(strategies, trades_from_api)
             Jsondb.write(write_job)
