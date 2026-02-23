@@ -8,6 +8,7 @@ from constants import O_SETG, S_DATA, logging
 from helper import Helper
 from jsondb import Jsondb
 from strategy import Strategy
+from symbols import Symbols
 
 
 def strategies_from_file():
@@ -61,6 +62,9 @@ def create_strategy(list_of_orders):
 
 def _init():
     logging.info("HAPPY TRADING")
+    exchanges = O_SETG["exchanges"]
+    for ex in exchanges:
+        Symbols(ex).get_exchange_token_map_finvasia()
     F_ORDERS = S_DATA + "orders.json"
     Jsondb.startup(F_ORDERS)
     Helper.api()
@@ -72,7 +76,6 @@ def run_strategies(strategies, trades_from_api):
         write_job = []
         for strgy in strategies:
             ltps = Helper.get_quotes()
-            logging.info(f"RUNNING {strgy._fn} for {strgy._id}")
             completed_buy_order_id = strgy.run(trades_from_api, ltps)
             obj_dict = strgy.__dict__
             obj_dict.pop("_orders")

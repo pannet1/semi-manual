@@ -1,7 +1,22 @@
-import pandas as pd
 import re
-from toolkit.fileutils import Fileutils
 from typing import Dict, Optional
+
+import pandas as pd
+from toolkit.fileutils import Fileutils
+
+
+def find_colval_from_exch_symbol(option_exchange, ts, colname):
+    """
+    possible colnames are Symbol and OptionType
+    """
+    csvfile = f"../data/{option_exchange}_symbols.csv"
+    df = pd.read_csv(csvfile)
+    symbol_master = df.set_index("TradingSymbol")[["Symbol", "OptionType"]].to_dict(
+        "index"
+    )
+    data = symbol_master.get(ts)
+    return data[colname] if data else None
+
 
 dct_sym = {
     "NIFTY": {
@@ -51,7 +66,7 @@ class Symbols:
     None
     """
 
-    def __init__(self, option_exchange: str, base: str, expiry: str):
+    def __init__(self, option_exchange: str, base="", expiry=""):
         self._option_exchange = option_exchange
         self._base = base
         self.expiry = expiry
@@ -185,7 +200,6 @@ class Symbols:
             option_pattern = self._base + self.expiry + c_or_p + str(find_strike)
 
             for k, v in dct_symbols.items():
-
                 if v == option_pattern:
                     match.update({"symbol": v, "token": k.split("|")[-1]})
                     break
@@ -198,8 +212,12 @@ class Symbols:
 
 
 if __name__ == "__main__":
-    symbols = Symbols("NFO", "BANKNIFTY", "26JUN24")
+    symbols = Symbols("NFO")
     symbols.get_exchange_token_map_finvasia()
+    result = find_colval_from_exch_symbol(
+        option_exchange="NFO", ts="NIFTY24FEB26C25600", colname="OptionType"
+    )
+    print(result)
+
     dct_tokens = symbols.get_tokens(50000)
     print(dct_tokens)
-    # print(symbols.find_option_type("BANKNIFTY28DEC23C47000"))

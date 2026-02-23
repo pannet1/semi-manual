@@ -2,6 +2,7 @@ from traceback import print_exc
 
 from constants import O_SETG, logging
 from helper import Helper
+from symbols import find_colval_from_exch_symbol
 
 
 class Strategy:
@@ -12,18 +13,25 @@ class Strategy:
             self._id = id
             self._buy_order = buy_order
             self._symbol = symbol_info["symbol"]
-            self._option_type = "CE" if "CE" in self._symbol else "PE"
             self._fill_price = float(buy_order["fill_price"])
             self._exchange = self._buy_order["exchange"]
+            self._option_type = find_colval_from_exch_symbol(
+                option_exchange=self._exchange,
+                ts=symbol_info["symbol"],
+                colname="OptionType",
+            )
+            if isinstance(self._option_type, str):
+                self._option_type += "E"
+
             # todo low to be removed
             self._low = float(symbol_info["low"])
             self._ltp = float(symbol_info["ltp"])
             # remove condition from mai
-            #self._condition = symbol_info["condition"]
+            # self._condition = symbol_info["condition"]
             self.stops = symbol_info["stops"]
             self._sell_order = ""
             self._orders = []
-            self._conditions =  [
+            self._conditions = [
                 "self._fill_price < self._stop",
                 "self._ltp > self._target",
                 "self._ltp < self._stop",
@@ -56,7 +64,7 @@ class Strategy:
             logging.info(f"Target set at: {self._target}")
 
             # self.stops = {"CE": 12, .. }
-            if val:= self.stops.get(self._option_type):
+            if val := self.stops.get(self._option_type):
                 self._stop = val
             else:
                 self._stop = self._low
@@ -126,7 +134,12 @@ class Strategy:
                 result = eval(condition)
                 if result:
                     self._exit_trade()
-                    logging.info(f"exiting because of {condition} s:{self._stop} f:{self._fill_price} t:{self._target}")
+                    logging.info(
+                        f"exiting because of {condition} s:{self._stop} f:{self._fill_price} t:{self._target}"
+                    )
+                    logging.info(
+                        f"exiting because of {condition} s:{self._stop} f:{self._fill_price} t:{self._target}"
+                    )
                     return
         except Exception as e:
             logging.error(f"{e} while exit order")
