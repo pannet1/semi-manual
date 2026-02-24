@@ -1,9 +1,8 @@
-from pprint import pprint
+import os
 from traceback import print_exc
 
 from toolkit.kokoo import is_time_past, timer
 
-from autobuy import AutoBuy
 from constants import O_SETG, S_DATA, logging
 from helper import Helper
 from jsondb import Jsondb
@@ -11,7 +10,7 @@ from strategy import Strategy
 from symbols import Symbols
 
 
-def strategies_from_file():
+def strategies_to_run_from_file():
     try:
         strategies = []
         list_of_attribs = Jsondb.read()
@@ -20,17 +19,17 @@ def strategies_from_file():
                 strgy = Strategy(attribs, "", {}, {})
                 strategies.append(strgy)
     except Exception as e:
-        logging.error(f"{e} while strategies_from_file")
+        logging.error(f"{e} while strategies_to_run_from_file")
         print_exc()
     finally:
         return strategies
 
 
-def create_strategy(list_of_orders):
+def create_one_strategy(list_of_orders):
     try:
-        condition = "self._ltp < self._low"
         strgy = None
         info = None
+
         if any(list_of_orders):
             order_item = list_of_orders[0]
             if any(order_item):
@@ -38,22 +37,12 @@ def create_strategy(list_of_orders):
                 info = Helper.symbol_info(b["exchange"], b["symbol"])
                 if info:
                     logging.info(f"CREATE new strategy {order_item['id']} {info}")
-                    """
-                    if b["exchange"] == "MCX":
-                        condition = find_mcx_exit_condition(b["symbol"])
-                    """
-                    info["condition"] = condition
                     stops = O_SETG.get("stops", None)
                     if stops:
                         info["stops"] = stops.get(b["exchange"], {})
                     strgy = Strategy(
                         {}, order_item["id"], order_item["buy_order"], info
                     )
-                else:
-                    logging.error(f"No info for {b['symbol']}")
-                    print(f"could not find low, for {b['symbol']} closing positions")
-                    Helper.close_positions()
-
         return strgy
     except Exception as e:
         logging.error(f"{e} while creating strategy")
@@ -77,17 +66,21 @@ def run_strategies(strategies, trades_from_api):
         for strgy in strategies:
             ltps = Helper.get_quotes()
             completed_buy_order_id = strgy.run(trades_from_api, ltps)
+
             obj_dict = strgy.__dict__
             obj_dict.pop("_orders")
             for k, v in obj_dict.items():
-                if not isinstance(v, dict):
+                if not isinstance(v, (dict, list)):
                     print(k, v)
             timer(0.5)
+
             if completed_buy_order_id:
                 logging.debug(f"COMPLETED buy {completed_buy_order_id}")
                 Helper.completed_trades.append(completed_buy_order_id)
             else:
                 write_job.append(obj_dict)
+        else:
+            os.system("cls" if os.name == "nt" else "clear")
 
     except Exception as e:
         print_exc()
@@ -101,28 +94,15 @@ def main():
         _init()
         # auto_buy = AutoBuy(O_SETG["sleep_for"])
         while not is_time_past(O_SETG["trade"]["stop"]):
-            strategies = strategies_from_file()
+            # previously ran strategies are read from file
+            strategies: list = strategies_to_run_from_file()
 
             trades_from_api = Helper.trades()
-            completed_trades = Helper.completed_trades
-            list_of_trades = Jsondb.filter_trades(trades_from_api, completed_trades)
-            strgy = create_strategy(list_of_trades)
+            strgy = create_one_strategy(
+                Jsondb.filter_trades(trades_from_api, Helper.completed_trades)
+            )
             if strgy:
                 strategies.append(strgy)
-                # copy params from manual buy to autobuy
-                symbol = strgy._buy_order["symbol"]
-                logging.debug(f"BUY {symbol}")
-                exchange = strgy._buy_order["exchange"]
-                """
-                qty_low_ltp = {
-                    "low": strgy._stop,
-                    "quantity": strgy._buy_order["quantity"],
-                    "product": strgy._buy_order["product"],
-                    "exchange": exchange,
-                }
-                logging.debug(f"param qty_low_ltp:{qty_low_ltp}")
-                auto_buy.init(symbol, qty_low_ltp)
-                """
 
             write_job = run_strategies(strategies, trades_from_api)
             Jsondb.write(write_job)

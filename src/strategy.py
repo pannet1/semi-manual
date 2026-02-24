@@ -144,8 +144,11 @@ class Strategy:
             logging.error(f"{e} while exit order")
             print_exc()
 
-    def run(self, orders, ltps):
+    def run(self, orders, ltps, position_count):
         try:
+            if position_count.get(self._symbol, 1) == 0:
+                return self._id
+
             self._orders = orders
             ltp = ltps.get(self._symbol, None)
             if ltp is not None:

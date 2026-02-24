@@ -1,9 +1,11 @@
-from datetime import time
-import pendulum as pdlm
-from constants import O_FUTL, logging
-from traceback import print_exc
-from toolkit.kokoo import timer
 import os
+from datetime import time
+from traceback import print_exc
+
+import pendulum as pdlm
+from toolkit.kokoo import timer
+
+from constants import O_FUTL, logging
 
 
 class Jsondb:
@@ -52,21 +54,23 @@ class Jsondb:
         try:
             new = []
             ids = []
+
             order_from_file = cls.read()
             if order_from_file and any(order_from_file):
                 ids = [order["_id"] for order in order_from_file]
+
             if trades_from_api and any(trades_from_api):
-                """convert list to dict with order id as key"""
+                """convert list to dict with trade id as key"""
                 new = [
-                    {"id": order["order_id"], "buy_order": order}
-                    for order in trades_from_api
-                    if order["side"] == "B"
-                    and order["order_id"] not in ids
-                    and order["order_id"] not in completed_trades
-                    and order.get("tag", None) is None
+                    {"id": trade["order_id"], "buy_order": trade}
+                    for trade in trades_from_api
+                    if trade["side"] == "B"
+                    and trade["order_id"] not in ids
+                    and trade["order_id"] not in completed_trades
+                    and trade.get("tag", None) is None
                     and (
                         pdlm.from_format(
-                            order["broker_timestamp"],
+                            trade["broker_timestamp"],
                             cls.format_string,
                             tz="Asia/Kolkata",
                         )
@@ -74,10 +78,10 @@ class Jsondb:
                     )
                 ]
                 for item in new:
-                    logging.debug(f'new: {item["buy_order"]}')
+                    logging.debug(f"new: {item['buy_order']}")
 
         except Exception as e:
-            logging.error(f"{e} while get one order")
+            logging.error(f"{e} while get one trade")
             print_exc()
         finally:
             return new
@@ -89,6 +93,6 @@ if __name__ == "__main__":
     o_time = pdlm.from_format(
         "09:31:00 06-10-2025", Jsondb.format_string, tz="Asia/Kolkata"
     )
-    assert (
-        now > o_time
-    ), "time is wrong"  # Assert that the current time is greater than the time of the order
+    assert now > o_time, (
+        "time is wrong"
+    )  # Assert that the current time is greater than the time of the trade

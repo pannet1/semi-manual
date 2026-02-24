@@ -1,15 +1,15 @@
-from traceback import print_exc
 import re
-from stock_brokers.finvasia.finvasia import Finvasia
+from traceback import print_exc
+
+import pendulum as pdlm
 from stock_brokers.finvasia.api_helper import (
-    make_order_modify_args,
-    make_order_place_args,
     post_order_hook,
 )
+from stock_brokers.finvasia.finvasia import Finvasia
 from toolkit.datastruct import filter_dictionary_by_keys
-from constants import O_CNFG, logging, O_SETG
-import pendulum as pdlm
 from toolkit.kokoo import blink, timer
+
+from constants import O_CNFG, O_SETG, logging
 from wserver import Wserver
 
 
@@ -243,6 +243,13 @@ class Helper:
             return from_api
 
     @classmethod
+    def position_count(cls):
+        dct = {}
+        for pos in cls.api.positions:
+            dct[pos["symbol"]] = pos["quantity"]
+        return dct
+
+    @classmethod
     def close_positions(cls):
         for pos in cls.api.positions:
             if pos["quantity"] == 0:
@@ -307,7 +314,9 @@ class Helper:
 
 if __name__ == "__main__":
     from pprint import pprint
+
     import pandas as pd
+
     from constants import S_DATA
 
     Helper.api
