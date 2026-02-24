@@ -27,26 +27,35 @@ def strategies_to_run_from_file():
 
 def create_one_strategy(list_of_orders):
     try:
-        strgy = None
-        info = None
+        # 1. Early exit: Check if list is empty or first item is invalid
+        if not list_of_orders or not (order_item := list_of_orders[0]):
+            return None
 
-        if any(list_of_orders):
-            order_item = list_of_orders[0]
-            if any(order_item):
-                b = order_item["buy_order"]
-                info = Helper.symbol_info(b["exchange"], b["symbol"])
-                if info:
-                    logging.info(f"CREATE new strategy {order_item['id']} {info}")
-                    stops = O_SETG.get("stops", None)
-                    if stops:
-                        info["stops"] = stops.get(b["exchange"], {})
-                    strgy = Strategy(
-                        {}, order_item["id"], order_item["buy_order"], info
-                    )
-        return strgy
+        # 2. Extract frequently used variables early
+        buy_order = order_item.get("buy_order")
+        if not buy_order:
+            return None
+
+        # 3. Fetch info and exit if not found
+        info = Helper.symbol_info(buy_order["exchange"], buy_order["symbol"])
+        if not info:
+            return None
+
+        logging.info(f"CREATE new strategy {order_item['id']} {info}")
+
+        # 4. Handle 'stops' more efficiently
+        # Using .get().get() prevents nested if/else blocks
+        exchange_stops = O_SETG.get("stops", {}).get(buy_order["exchange"])
+        if exchange_stops:
+            info["stops"] = exchange_stops
+
+        # 5. Return the object directly
+        return Strategy({}, order_item["id"], buy_order, info)
+
     except Exception as e:
-        logging.error(f"{e} while creating strategy")
+        logging.error(f"Error while creating strategy: {e}")
         print_exc()
+        return None
 
 
 def _init():
@@ -61,17 +70,18 @@ def _init():
 
 def run_strategies(strategies, trades_from_api):
     try:
-        #
         write_job = []
         for strgy in strategies:
-            ltps = Helper.get_quotes()
-            completed_buy_order_id = strgy.run(trades_from_api, ltps)
+            completed_buy_order_id = strgy.run(
+                trades_from_api, Helper.get_quotes(), Helper.position_count()
+            )
 
             obj_dict = strgy.__dict__
             obj_dict.pop("_orders")
             for k, v in obj_dict.items():
                 if not isinstance(v, (dict, list)):
                     print(k, v)
+            print("*" * 40)
             timer(0.5)
 
             if completed_buy_order_id:
