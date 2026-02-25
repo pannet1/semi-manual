@@ -245,13 +245,14 @@ class Helper:
     @classmethod
     def position_count(cls):
         dct = {}
-        for pos in cls.api.positions:
+        for pos in cls._api.positions:
+            print(pos)
             dct[pos["symbol"]] = pos["quantity"]
         return dct
 
     @classmethod
     def close_positions(cls):
-        for pos in cls.api.positions:
+        for pos in cls.api().positions:
             if pos["quantity"] == 0:
                 continue
             else:
@@ -268,7 +269,7 @@ class Helper:
                     order_type="MKT",
                     exchange="NFO",
                 )
-                resp = cls.api.order_place(**args)
+                resp = cls.api().order_place(**args)
                 send_messages(f"api responded with {resp}")
             elif quantity > 0:
                 args = dict(
@@ -358,4 +359,8 @@ if __name__ == "__main__":
     trades()
     margin()
     resp = Helper.pnl("rpnl")
+    print(resp)
+
+    resp = Helper.position_count()
+
     print(resp)
