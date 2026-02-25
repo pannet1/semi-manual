@@ -90,7 +90,7 @@ def run_strategies(strategies, trades_from_api):
             else:
                 write_job.append(obj_dict)
         else:
-            os.system("cls" if os.name == "nt" else "clear")
+            print("\n")
 
     except Exception as e:
         print_exc()
