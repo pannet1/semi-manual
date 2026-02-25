@@ -229,9 +229,11 @@ if __name__ == "__main__":
     symbols = Symbols("NFO")
     symbols.get_exchange_token_map_finvasia()
     result = find_colval_from_exch_symbol(
-        option_exchange="NFO", ts="NIFTY24FEB26C25600"
+        option_exchange="NFO", ts="SENSEX26FEB82500CE"
     )
     print(result)
 
+    """
     dct_tokens = symbols.get_tokens(50000)
     print(dct_tokens)
+    """

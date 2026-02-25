@@ -1,4 +1,6 @@
-import os
+import subprocess
+import sys
+import time
 from traceback import print_exc
 
 from toolkit.kokoo import is_time_past, timer
@@ -8,6 +10,36 @@ from helper import Helper
 from jsondb import Jsondb
 from strategy import Strategy
 from symbols import Symbols
+
+# --- Auto-install Rich ---
+try:
+    from rich.console import Console
+    from rich.live import Live
+    from rich.table import Table
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "rich"])
+    from rich.console import Console
+    from rich.live import Live
+    from rich.table import Table
+
+
+def generate_table(strategies):
+    # Create the structure based on your existing data
+    table = Table(title="Strategy Monitor")
+    table.add_column("Strategy")
+    table.add_column("Key")
+    table.add_column("Value")
+
+    for strgy in strategies:
+        # Using your logic to filter obj_dict
+        obj_dict = strgy.__dict__
+        s_id = obj_dict.get("id", "N/A")
+
+        for k, v in obj_dict.items():
+            # Exclude dicts, lists, and your specific _orders key
+            if k != "_orders" and not isinstance(v, (dict, list)):
+                table.add_row(str(s_id), str(k), str(v))
+    return table
 
 
 def strategies_to_run_from_file():

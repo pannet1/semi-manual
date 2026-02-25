@@ -136,9 +136,6 @@ class Strategy:
                     logging.info(
                         f"exiting because of {condition} s:{self._stop} f:{self._fill_price} t:{self._target}"
                     )
-                    logging.info(
-                        f"exiting because of {condition} s:{self._stop} f:{self._fill_price} t:{self._target}"
-                    )
                     return
         except Exception as e:
             logging.error(f"{e} while exit order")
@@ -146,10 +143,11 @@ class Strategy:
 
     def run(self, orders, ltps, position_count):
         try:
+            self._orders = orders
+
             if position_count.get(self._symbol, 1) == 0:
                 return self._id
 
-            self._orders = orders
             ltp = ltps.get(self._symbol, None)
             if ltp is not None:
                 self._ltp = float(ltp)
