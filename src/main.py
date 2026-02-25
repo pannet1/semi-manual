@@ -1,6 +1,5 @@
 import subprocess
 import sys
-import time
 from traceback import print_exc
 
 from toolkit.kokoo import is_time_past, timer
@@ -23,28 +22,24 @@ except ImportError:
     from rich.table import Table
 
 
-def generate_table(strategies):
-    # Create the structure based on your existing data
-    table = Table(title="Strategy Monitor")
-    table.add_column("Strategy")
-    table.add_column("Key")
-    table.add_column("Value")
+def generate_table(strgy):
+    """Accepts ONE strategy object and returns a table for it."""
+    obj_dict = strgy.__dict__
+    s_id = obj_dict.get("_id", "N/A")
 
-    for strgy in strategies:
-        # Using your logic to filter obj_dict
-        obj_dict = strgy.__dict__
-        s_id = obj_dict.get("id", "N/A")
+    table = Table(title=f"Live Monitor: {s_id}")
+    table.add_column("Key", style="yellow")
+    table.add_column("Value", style="green")
 
-        for k, v in obj_dict.items():
-            # Exclude dicts, lists, and your specific _orders key
-            if k != "_orders" and not isinstance(v, (dict, list)):
-                table.add_row(str(s_id), str(k), str(v))
+    for k, v in obj_dict.items():
+        if not isinstance(v, (dict, list)):
+            table.add_row(str(k), str(v))
     return table
 
 
 def strategies_to_run_from_file():
+    strategies = []
     try:
-        strategies = []
         list_of_attribs = Jsondb.read()
         if list_of_attribs and any(list_of_attribs):
             for attribs in list_of_attribs:
@@ -59,29 +54,23 @@ def strategies_to_run_from_file():
 
 def create_one_strategy(list_of_orders):
     try:
-        # 1. Early exit: Check if list is empty or first item is invalid
         if not list_of_orders or not (order_item := list_of_orders[0]):
             return None
 
-        # 2. Extract frequently used variables early
         buy_order = order_item.get("buy_order")
         if not buy_order:
             return None
 
-        # 3. Fetch info and exit if not found
         info = Helper.symbol_info(buy_order["exchange"], buy_order["symbol"])
         if not info:
             return None
 
         logging.info(f"CREATE new strategy {order_item['id']} {info}")
 
-        # 4. Handle 'stops' more efficiently
-        # Using .get().get() prevents nested if/else blocks
         exchange_stops = O_SETG.get("stops", {}).get(buy_order["exchange"])
         if exchange_stops:
             info["stops"] = exchange_stops
 
-        # 5. Return the object directly
         return Strategy({}, order_item["id"], buy_order, info)
 
     except Exception as e:
@@ -100,20 +89,25 @@ def _init():
     Helper.api()
 
 
-def run_strategies(strategies, trades_from_api):
+def run_strategies(strategies, trades_from_api, live):
     try:
         write_job = []
         for strgy in strategies:
+            # 1. Run the strategy logic
             completed_buy_order_id = strgy.run(
                 trades_from_api, Helper.get_quotes(), Helper.position_count()
             )
 
-            obj_dict = strgy.__dict__
-            obj_dict.pop("_orders")
-            for k, v in obj_dict.items():
-                if not isinstance(v, (dict, list)):
-                    print(k, v)
-            print("*" * 40)
+            # 2. Update the terminal "In-Place" for this specific strategy
+            # This replaces your old print(k, v) logic
+            live.update(generate_table(strgy))
+
+            # 3. Handle the data structure for writing
+            obj_dict = strgy.__dict__.copy()
+            if "_orders" in obj_dict:
+                obj_dict.pop("_orders")
+
+            # 4. Timer to give you time to see the data before the next one appears
             timer(0.5)
 
             if completed_buy_order_id:
@@ -121,8 +115,6 @@ def run_strategies(strategies, trades_from_api):
                 Helper.completed_trades.append(completed_buy_order_id)
             else:
                 write_job.append(obj_dict)
-        else:
-            print("\n")
 
     except Exception as e:
         print_exc()
@@ -134,24 +126,29 @@ def run_strategies(strategies, trades_from_api):
 def main():
     try:
         _init()
-        # auto_buy = AutoBuy(O_SETG["sleep_for"])
-        while not is_time_past(O_SETG["trade"]["stop"]):
-            # previously ran strategies are read from file
-            strategies: list = strategies_to_run_from_file()
+        console = Console()
 
-            trades_from_api = Helper.trades()
-            strgy = create_one_strategy(
-                Jsondb.filter_trades(trades_from_api, Helper.completed_trades)
-            )
-            if strgy:
-                strategies.append(strgy)
+        # We wrap the main loop in Live once
+        with Live(
+            Table(title="Initializing..."), console=console, auto_refresh=True
+        ) as live:
+            while not is_time_past(O_SETG["trade"]["stop"]):
+                strategies: list = strategies_to_run_from_file()
 
-            write_job = run_strategies(strategies, trades_from_api)
-            Jsondb.write(write_job)
+                trades_from_api = Helper.trades()
+                strgy_new = create_one_strategy(
+                    Jsondb.filter_trades(trades_from_api, Helper.completed_trades)
+                )
+                if strgy_new:
+                    strategies.append(strgy_new)
 
-            # auto_buy.is_breakout(Helper.get_quotes())
+                # Pass the 'live' object into your strategy runner
+                write_job = run_strategies(strategies, trades_from_api, live)
+
+                Jsondb.write(write_job)
+
     except KeyboardInterrupt:
-        __import__("sys").exit()
+        sys.exit()
     except Exception as e:
         print_exc()
         logging.error(f"{e} while init")
