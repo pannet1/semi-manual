@@ -22,14 +22,14 @@ except ImportError:
     from rich.table import Table
 
 
-def generate_table(strgy):
+def generate_table(obj_dict):
     """Accepts ONE strategy object and returns a table for it."""
-    obj_dict = strgy.__dict__
-    s_id = obj_dict.get("_id", "N/A")
+    s_id = obj_dict.pop("_id", None)
 
     table = Table(title=f"Live Monitor: {s_id}")
-    table.add_column("Key", style="yellow")
-    table.add_column("Value", style="green")
+    table.add_column("Key", style="blue")
+    style = "green" if obj_dict._ltp > obj_dict._fill_price else "red"
+    table.add_column("Value", style=style)
 
     for k, v in obj_dict.items():
         if not isinstance(v, (dict, list)):
@@ -92,23 +92,19 @@ def _init():
 def run_strategies(strategies, trades_from_api, live):
     try:
         write_job = []
+        position_count = Helper.position_count()
+        quotes = Helper.get_quotes()
         for strgy in strategies:
             # 1. Run the strategy logic
-            completed_buy_order_id = strgy.run(
-                trades_from_api, Helper.get_quotes(), Helper.position_count()
-            )
-
-            # 2. Update the terminal "In-Place" for this specific strategy
-            # This replaces your old print(k, v) logic
-            live.update(generate_table(strgy))
+            completed_buy_order_id = strgy.run(trades_from_api, quotes, position_count)
 
             # 3. Handle the data structure for writing
             obj_dict = strgy.__dict__.copy()
-            if "_orders" in obj_dict:
-                obj_dict.pop("_orders")
+            obj_dict.pop("_orders", None)
 
-            # 4. Timer to give you time to see the data before the next one appears
-            timer(0.5)
+            # 2. Update the terminal "In-Place" for this specific strategy
+            # This replaces your old print(k, v) logic
+            live.update(generate_table(obj_dict))
 
             if completed_buy_order_id:
                 logging.debug(f"COMPLETED buy {completed_buy_order_id}")
@@ -144,8 +140,10 @@ def main():
 
                 # Pass the 'live' object into your strategy runner
                 write_job = run_strategies(strategies, trades_from_api, live)
-
                 Jsondb.write(write_job)
+
+                # 4. Timer to give you time to see the data before the next one appears
+                timer(0.5)
 
     except KeyboardInterrupt:
         sys.exit()

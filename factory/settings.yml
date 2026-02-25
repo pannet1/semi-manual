@@ -1,14 +1,36 @@
-log:
-  show: 0
-  level: 29
-trade:
-  stop: "23:50"
 targets:
-  NFO: 2
-  MCX: 2
-  NSE: 2
+    NFO:
+        CE: 5
+        PE: 5
+    MCX:
+        CE: .5
+        PE: .5
+    BFO:
+        CE: 5%
+        PE: 5%
 stops:
-  NFO: 50
-  MCX: 50
-  BFO: 50
+    NFO:
+        NIFTY:
+            CE: 150
+            PE: 150
+        BANKNIFTY:
+            CE: 300
+            PE: 300
+    BFO:
+        SENSEX:
+            CE: 250
+            PE: 250
+    MCX:
+        NATURALGAS:
+            CE: 15
+            PE: 15
 sleep_for: 1
+log:
+    show: 0
+    level: 10
+trade:
+    stop: "23:50"
+exchanges:
+    - NFO
+    - BFO
+    - MCX
