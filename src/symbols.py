@@ -1,4 +1,5 @@
 import re
+from re import search
 from typing import Dict, Optional
 
 import pandas as pd
@@ -9,6 +10,19 @@ def find_colval_from_exch_symbol(option_exchange, ts):
     """
     possible colnames are Symbol and OptionType
     """
+    if option_exchange == "BFO":
+        # Regex breakdown:
+        # ^([A-Z]+) -> Capture first alpha part (SENSEX)
+        # .* -> Match everything in between
+        # ([A-Z])   -> Capture EXACTLY ONE alpha char at the end (P)
+        # [A-Z]$    -> Match the very last alpha char but don't capture it (E)
+        match = search(r"^([A-Z]+).*([A-Z])[A-Z]$", ts)
+
+        if match:
+            Symbol = match.group(1)  # SENSEX
+            OptionType = match.group(2)  # P
+            return (Symbol, OptionType)
+
     csvfile = f"../data/{option_exchange}_symbols.csv"
     df = pd.read_csv(csvfile)
     symbol_master = df.set_index("TradingSymbol")[["Symbol", "OptionType"]].to_dict(

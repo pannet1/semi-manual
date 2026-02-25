@@ -185,7 +185,7 @@ class Helper:
     def modify_order(cls, args):
         try:
             # args = make_order_modify_args(**args)
-            resp = cls.api().order_modify(**args)
+            resp = cls._api.order_modify(**args)
             return resp
         except Exception as e:
             message = f"helper error {e} while modifying order"
@@ -246,7 +246,6 @@ class Helper:
     def position_count(cls):
         dct = {}
         for pos in cls._api.positions:
-            print(pos)
             dct[pos["symbol"]] = pos["quantity"]
         return dct
 
