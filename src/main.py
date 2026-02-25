@@ -28,7 +28,9 @@ def generate_table(obj_dict):
 
     table = Table(title=f"Live Monitor: {s_id}")
     table.add_column("Key", style="blue")
-    style = "green" if obj_dict._ltp > obj_dict._fill_price else "red"
+    ltp = obj_dict.get("_ltp", 0)
+    fill = obj_dict.get("_fill_price", 0)
+    style = "green" if ltp > fill else "red"
     table.add_column("Value", style=style)
 
     for k, v in obj_dict.items():
