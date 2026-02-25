@@ -24,7 +24,7 @@ except ImportError:
 
 def generate_table(obj_dict):
     """Accepts ONE strategy object and returns a table for it."""
-    s_id = obj_dict.pop("_id", None)
+    s_id = obj_dict.get("_id", None)
 
     table = Table(title=f"Live Monitor: {s_id}")
     table.add_column("Key", style="blue")
