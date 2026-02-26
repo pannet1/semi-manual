@@ -24,10 +24,11 @@ def generate_table(strgy):
 
     # Raw property access
     table.add_row("Symbol", str(strgy._symbol))
-    table.add_row("Fill Price", str(strgy._fill_price))
     table.add_row("LTP", str(strgy._ltp))
     table.add_row("Target", str(strgy._target))
+    table.add_row("Fill Price", str(strgy._fill_price))
     table.add_row("Stop", str(strgy._stop))
+    table.add_row("Low", str(strgy._low))
     table.add_row("Function", str(strgy._fn))
     
     return table
