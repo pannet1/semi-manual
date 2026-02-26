@@ -3,12 +3,43 @@ from traceback import print_exc
 from toolkit.kokoo import is_time_past, timer
 from constants import O_SETG, logging
 from helper import Helper
-from memorydb import Memorydb  # Switched from Jsondb
 from strategy import Strategy
 from symbols import Symbols
 from rich.console import Console
 from rich.live import Live
 from rich.table import Table
+
+# Resolve once at script startup
+SCRIPT_START_TIME = pdlm.now("Asia/Kolkata")
+TRADE_TIMESTAMP_FORMAT = "HH:mm:ss DD-MM-YYYY"
+
+def get_new_trades(trades_from_api, completed_trades, active_ids):
+    """
+    High-speed filter for new buy orders using the pre-resolved start time.
+    """
+    new = []
+    try:
+        if trades_from_api and any(trades_from_api):
+            new = [
+                {"id": trade["order_id"], "buy_order": trade}
+                for trade in trades_from_api
+                if trade["side"] == "B"
+                and trade["order_id"] not in active_ids
+                and trade["order_id"] not in completed_trades
+                and trade.get("tag") is None
+                and (
+                    pdlm.from_format(
+                        trade["broker_timestamp"],
+                        TRADE_TIMESTAMP_FORMAT,
+                        tz="Asia/Kolkata",
+                    )
+                    > SCRIPT_START_TIME # Uses the constant resolved once
+                )
+            ]
+    except Exception as e:
+        logging.error(f"{e} while filtering trades")
+        print_exc()
+    return new
 
 def generate_table(strgy):
     """
@@ -88,7 +119,7 @@ def main():
                 trades_from_api = Helper.trades()
                 
                 # Using the new Memory db signature
-                new_trades = Memorydb.filter_trades(
+                new_trades = get_new_trades(
                     trades_from_api, 
                     Helper.completed_trades, 
                     active_ids
