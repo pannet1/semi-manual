@@ -10,28 +10,28 @@ from rich.console import Console
 from rich.live import Live
 from rich.table import Table
 
-
 def generate_table(strgy):
     """
     Directly accesses Strategy object properties. 
-    No dict conversion, no str() casting.
+    Raw values, no formatting, no dict iteration.
     """
     table = Table(title=f"Live Monitor: {strgy._id}")
     table.add_column("Property", style="yellow")
     
-    # Determine style based on P&L
+    # Simple logic for table color
     style = "green" if strgy._ltp > strgy._fill_price else "red"
     table.add_column("Value", style=style)
 
-    # Pass raw values; Rich handles the display
-    table.add_row("Symbol", strgy._symbol)
-    table.add_row("Fill Price", strgy._fill_price)
-    table.add_row("LTP", strgy._ltp)
-    table.add_row("Target", strgy._target)
-    table.add_row("Stop", strgy._stop)
-    table.add_row("Function", strgy._fn)
+    # Raw property access
+    table.add_row("Symbol", str(strgy._symbol))
+    table.add_row("Fill Price", str(strgy._fill_price))
+    table.add_row("LTP", str(strgy._ltp))
+    table.add_row("Target", str(strgy._target))
+    table.add_row("Stop", str(strgy._stop))
+    table.add_row("Function", str(strgy._fn))
     
     return table
+
 
 def create_one_strategy(list_of_orders):
     try:
