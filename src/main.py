@@ -67,7 +67,7 @@ def run_strategies(strategies, trades_from_api, live):
                 Helper.completed_trades.append(completed_buy_order_id)
             else:
                 remaining_strategies.append(strgy)
-                live.update(generate_table(obj_dict))
+                live.update(generate_table(strgy))
     except Exception as e:
         print_exc()
         logging.error(f"{e} while run_strategies")
