@@ -8,6 +8,7 @@ from symbols import Symbols
 from rich.console import Console
 from rich.live import Live
 from rich.table import Table
+import pendulum as pdlm
 
 # Resolve once at script startup
 SCRIPT_START_TIME = pdlm.now("Asia/Kolkata")
