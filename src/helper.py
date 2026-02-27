@@ -246,7 +246,10 @@ class Helper:
     def position_count(cls):
         dct = {}
         for pos in cls._api.positions:
-            dct[pos["symbol"]] = pos["quantity"]
+            if isinstance(pos, dict):
+                symbol = pos.get("symbol", "unknown")
+                quantity = pos.get("quantity", 0)
+                dct[symbol] = quantity
         return dct
 
     @classmethod

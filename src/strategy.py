@@ -30,10 +30,12 @@ class Strategy:
             self.stops = symbol_info["stops"]
             self._sell_order = ""
             self._orders = []
-            self._conditions = [
-                "self._fill_price < self._stop",
-                "self._ltp > self._target",
-                "self._ltp < self._stop",
+            # 1. Define the rules with labels for logging
+            # Format: (Label1, Operator, Label2, Lambda function)
+            self._rules = [
+                ("Fill_Price", "<", "Stop", lambda: self._fill_price < self._stop),
+                ("LTP", ">=", "Target", lambda: self._ltp >= self._target),
+                ("LTP", "<=", "Stop", lambda: self._ltp <= self._stop),
             ]
             # stop set from outside
             self._set_target_and_stop()
@@ -127,19 +129,29 @@ class Strategy:
             logging.error(f"{e} get order from book")
             print_exc()
 
+
     def try_to_exit(self):
         try:
-            for condition in self._conditions:
-                result = eval(condition)
-                if result:
-                    self._exit_trade()
+            for v1_label, op, v2_label, condition in self._rules:
+                if condition():
+                    # Dynamically fetch values for the log
+                    # e.g., "Fill_Price" -> self._fill_price
+                    v1_val = getattr(self, f"_{v1_label.lower()}")
+                    v2_val = getattr(self, f"_{v2_label.lower()}")
+                    
                     logging.info(
-                        f"exiting because of {condition} s:{self._stop} f:{self._fill_price} t:{self._target}"
+                        f"EXIT TRIGGERED: {v1_label}({v1_val}) {op} {v2_label}({v2_val}) | Symbol: {self._symbol}"
                     )
-                    return
+                    
+                    # Execute the actual broker call
+                    self._exit_trade()
+                    continue
+                    
+            return None
         except Exception as e:
-            logging.error(f"{e} while exit order")
+            logging.error(f"Error in try_to_exit: {e}")
             print_exc()
+            return None
 
     def run(self, orders, ltps, position_count):
         try:
